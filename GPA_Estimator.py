@@ -35,7 +35,7 @@ def read_file(file_path)->list[dict[str,str]]: #improve using pandas , learn abo
                 line = list(line.strip().split(','))
                 print(line)
                 if len(line) == len(HEADER) - 1 :
-                    HEADER = ['AY','Module','AU','Grade','Points','SGPA','CGPA','Weight','Description'] 
+                    HEADER = ['AY','Module','AU','Grade','Points','SGPA','CGPA','Weight'] 
                 elif len(line) != len(HEADER):
                     raise ValueError("The number of columns in the file does not match the HEADER.")
                 #gpa_dict = {HEADER[i]: line[i] for i in range(len(HEADER))} 
@@ -158,7 +158,11 @@ def ay()->str:
 def updating_list(gpa_list):
     update_list = []
     for header in HEADER:
-        if header == 'Grade':
+        if header == 'Module':
+            user_input = input(f"{header}: ").strip().upper()
+            if user_input in mods_cache:
+                print (mods_cache[user_input])
+        elif header == 'Grade':
             user_input = input(f"{header}: ").strip().upper()
             grade = GRADE_SYSTEM[user_input]
         elif header == 'Points':
@@ -234,7 +238,7 @@ def menu():
 
 def main(): 
     global gpa_list,mods_cache,description
-    description=False
+    description=True
     mods_cache = fetch_mod_code.checking_cache_file(script_dir)
     read_file(file_path)
     calculate_cgpa(formating(gpa_list))

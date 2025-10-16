@@ -18,7 +18,7 @@ def checking_cache_file(DIR):
         with open(CACHE_FILE, "r") as f:
             try:
                 mods_cache = json.load(f)
-                print(f"checking ip cache: {mods_cache}")
+                #print(f"checking ip cache: {mods_cache}")
             except json.JSONDecodeError:
                 mods_cache = {}
     else:
@@ -70,10 +70,10 @@ def main():
     global mods_cache
     checking_cache_file(DIR)
     modules = scrape_ntumods()
-    print(modules)
+    #print(modules)
     print(f"Collected {len(modules)} modules")
     for i, (k, v) in enumerate(list(modules.items())[:], 1):
-        print(f"{i:>2}. {k}: {v['title']} ({v['school']}) {v['tags']}")
+        #print(f"{i:>2}. {k}: {v['title']} ({v['school']}) {v['tags']}")
         mods_cache[k] = v["title"]
     _save_cache()
         
