@@ -1,15 +1,17 @@
 import os, csv ,fetch_mod_code
+
 #file_path = (input("Enter the path to the file: ") + ".csv").strip().upper()
-file_path = 'Estimated GPA.csv'
-script_dir = os.path.dirname(os.path.abspath(__file__))
-file_path = os.path.join(script_dir, file_path)
+file_path = 'Estimated GPA.csv' #one parent dir outside of git repo
+root_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+file_path = os.path.join(root_directory, file_path)
 mods_cache = {}
 SAVE_CSV_TO_PARENT_DIR = True
-CACHE_FILE = os.path.join(script_dir,"mods_cache.json")
+CACHE_FILE = os.path.join(os.path.dirname(__file__),"mods_cache.json")
 HEADER = ['AY','Module','AU','Grade','Points','SGPA','CGPA','Weight','Description'] 
 gpa_list = []
-print(script_dir,end="-> Directory Path\n")
+print(root_directory,end="-> Directory Path\n")
 print(file_path,end= "->File Path\n")
+print(CACHE_FILE)
 def select_file(file_path='GPA.csv'):
     #options to edit actual gpa file, estimating gpa file, new gpa file
     return file_path
@@ -48,30 +50,52 @@ def read_file(file_path)->list[dict[str,str]]: #improve using pandas , learn abo
             #print(gpa_list)
     return gpa_list
 
-def mod_sorting(gpa_list,key="Module"): #putting default value so that u can sort by diff key with reference to AY
-    temp = None 
+def mod_sorting(gpa_list, KEY="Module"):  # same signature
+    # --- minimal safety: don't mutate caller's rows
+    rows = [dict(r) for r in gpa_list]
+    if not rows:
+        return []
+
+    # 1) Ensure groups are contiguous → sort by (AY, KEY)
+    rows.sort(key=lambda r: (r["AY"], r[KEY]))
+
+    temp_ay = None
     temp_list = []
     new_list = []
-    for index,dict in enumerate(gpa_list):
-        if index == len(gpa_list) -1 :
-            temp_list.append(dict)
-        if temp!=dict["AY"] or index == len(gpa_list) - 1: 
-            if temp is not None: 
-                temp_list.sort(key=lambda dict : dict[key])
-                calculate_cgpa(temp_list,True)
-                temp_sgpa = temp_list[-1]['SGPA']
-                for temp_dict in temp_list:
-                    temp_dict['SGPA'] = temp_sgpa
-                new_list.extend(temp_list)
-                temp_list = [] 
-            else: #if temp is None and theres only one dict in the list
-                new_list.extend(temp_list)
-            temp = dict["AY"]
-        temp_list.append(dict)
-    gpa_list = new_list[:]
-    return gpa_list
 
-def formating(gpa_list):
+    for idx, row in enumerate(rows):
+        # 2) Initialize current AY once
+        if temp_ay is None:
+            temp_ay = row["AY"]
+
+        # 3) Append BEFORE deciding to flush (you had it after)
+        temp_list.append(row)
+
+        # 4) Decide whether to flush this AY group
+        is_last = (idx == len(rows) - 1)
+        next_ay = rows[idx + 1]["AY"] if not is_last else None
+        need_flush = is_last or (next_ay != temp_ay)
+
+        if need_flush:
+            # keep your per-AY KEY sort
+            temp_list.sort(key=lambda r: r[KEY])
+
+            # keep your CGPA call and SGPA broadcast
+            temp_list = calculate_cgpa(temp_list, True)
+            temp_sgpa = temp_list[-1]['SGPA']
+            for r in temp_list:
+                r['SGPA'] = temp_sgpa
+
+            new_list.extend(temp_list)
+
+            # 5) reset group state for next AY
+            temp_list = []
+            temp_ay = next_ay
+
+    return new_list
+
+
+def formating(gpa_list,first_run = True):
     global HEADER,mods_cache
     au_weight = 0 
     for current_index , gpa_dict in enumerate(gpa_list):
@@ -95,19 +119,21 @@ def formating(gpa_list):
                     gpa_dict[key] = float(value.strip()) if isinstance(value,str) else value
                 elif key == 'CGPA':
                     gpa_dict[key] = float(value.strip()) if isinstance(value,str) else value
-                    calculate_cgpa(gpa_list,current_index)
+                    if not first_run:
+                        calculate_cgpa(gpa_list,False,current_index)
                 elif key == 'Weight' : 
                     #gpa_dict[key] = int(value.strip()) if isinstance(gpa_dict[key],str) else value
                     gpa_dict[key] = au_weight
             except Exception as e: 
-                print(e,end='this is the error at start up\n')
+                print(e,end=f'this is the error at start up for key {key}\n')
                 continue
         gpa_dict["Description"] = mods_cache[gpa_dict["Module"]] if gpa_dict["Module"] in mods_cache else "NA"
         if gpa_dict[key] == "NA":
             fetch_mod_code.main()
     return gpa_list 
 
-def calculate_cgpa(gpa_list,startup_index=len(gpa_list),SGPA = False): #adding default values to prevent start up error
+def calculate_cgpa(gpa_list,SGPA = False,startup_index=len(gpa_list)): #adding default values to prevent start up error
+    startup_index = len(gpa_list)
     au_counter =  0 
     total_points = 0.0
     for dict_index, gpa_dict in enumerate(gpa_list):
@@ -188,7 +214,9 @@ def updating_list(gpa_list):
         updating_dict[header] = update_list[index]
     #print(updating_dict)
     gpa_list.append(updating_dict)
+    print(gpa_list)
     formating(gpa_list)
+    print("after formatting\n\n" +f'{gpa_list}')
     return None
 
 def write_file(file_path, gpa_list,description=True):
@@ -209,13 +237,18 @@ def printing_list(gpa_list):
         for key in dict: 
             if key == 'Grade' and len(dict[key]) == 2: 
                 print(dict[key],end='  ')
+            elif key == "Weight" and dict[key]>= 10:
+                if dict[key]>=100:
+                    print(dict[key],end=' ')
+                else:
+                    print(dict[key],end = '  ')
             else:
                 print(dict[key],end='   ')
         print()
     return 
 
 def menu():
-    global description
+    global description,gpa_list
     input_choice = int(input("1. Update List \
                         \n2. Print List\
                         \n3. Delete Last\
@@ -239,7 +272,7 @@ def menu():
 def main(): 
     global gpa_list,mods_cache,description
     description=True
-    mods_cache = fetch_mod_code.checking_cache_file(script_dir)
+    mods_cache = fetch_mod_code.checking_cache_file(f'{root_directory}/NTU-GPA-Estimator')
     read_file(file_path)
     calculate_cgpa(formating(gpa_list))
     while True: 
@@ -270,5 +303,4 @@ grade_percentile = {
 }
 
 if __name__ == "__main__":
-    main() 
-    
+    main()

@@ -11,9 +11,10 @@ URL = "https://ntumods.com/mods"
 CACHE_FILE = 'mods_cache.json'
 mods_cache = {}
 # --- Load persistent cache on startup ---
-def checking_cache_file(DIR):
+def checking_cache_file(DIR=DIR):
     global CACHE_FILE,mods_cache
     CACHE_FILE = os.path.join(DIR,CACHE_FILE)
+    print(CACHE_FILE)
     if os.path.exists(CACHE_FILE):
         with open(CACHE_FILE, "r") as f:
             try:
@@ -63,20 +64,20 @@ def scrape_ntumods():
             "school": school,
             "url": href
         }
-
     return mods
 
 def main():
     global mods_cache
-    checking_cache_file(DIR)
+    #checking_cache_file(DIR)
     modules = scrape_ntumods()
-    #print(modules)
+    print(modules)
     print(f"Collected {len(modules)} modules")
     for i, (k, v) in enumerate(list(modules.items())[:], 1):
         #print(f"{i:>2}. {k}: {v['title']} ({v['school']}) {v['tags']}")
         mods_cache[k] = v["title"]
-    _save_cache()
+    #_save_cache()
         
 
 if __name__ == "__main__":
     main()
+    #checking_cache_file(DIR)
