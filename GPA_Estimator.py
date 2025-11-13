@@ -254,7 +254,8 @@ def menu():
                         \n3. Delete Last\
                         \n4. Save with Module Name\
                         \n5. Save without Module Name\
-                        \n6. Exit\
+                        \n6. Reload\
+                        \n7. Exit\
                         \nEnter: "))
     if input_choice == 1: 
         updating_list(gpa_list)
@@ -266,6 +267,9 @@ def menu():
         description = True
     elif input_choice == 5:
         description = False 
+    elif input_choice == 6 : 
+        read_file(file_path)
+        calculate_cgpa(formating(gpa_list))
     else: 
         exit()
 
@@ -278,7 +282,7 @@ def main():
     while True: 
         menu() # every action triggers sort by ay , formatting , mod sorting and writing file
         gpa_list.sort(key = lambda temp_dict : temp_dict['AY'])  #.sort() already iterate the list hence u only need to reference the key value pair
-        formating(gpa_list)         #parameter : return value
+        formating(gpa_list,first_run=False)         #parameter : return value
         gpa_list = mod_sorting(gpa_list)
         write_file(file_path, gpa_list,description)
 
