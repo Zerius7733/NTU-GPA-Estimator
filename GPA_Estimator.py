@@ -2,6 +2,7 @@ import os, csv ,fetch_mod_code
 
 #file_path = (input("Enter the path to the file: ") + ".csv").strip().upper()
 file_path = 'Estimated GPA.csv' #one parent dir outside of git repo
+#file_path = 'Actual GPA.csv'
 root_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 file_path = os.path.join(root_directory, file_path)
 mods_cache = {}
@@ -14,7 +15,15 @@ print(file_path,end= "->File Path\n")
 print(CACHE_FILE)
 def select_file(file_path='GPA.csv'):
     #options to edit actual gpa file, estimating gpa file, new gpa file
-    return file_path
+    print ("1.Actual GPA.csv\
+            \n2.Estimated GPA.csv\n", end = '' )
+    file_selection = int(input("Enter file selection:"))
+    match file_selection:
+        case 1: 
+            return "Actual GPA.csv"
+        case 2: 
+            return "Estimated GPA.csv"
+    return None
 def check_file_exist(file_path:str)->bool:
     if not os.path.exists(file_path):
         with open(file_path, 'w') as file: 
@@ -277,6 +286,7 @@ def main():
     global gpa_list,mods_cache,description
     description=True
     mods_cache = fetch_mod_code.checking_cache_file(f'{root_directory}/NTU-GPA-Estimator')
+    file_path = os.path.join(root_directory, select_file())
     read_file(file_path)
     calculate_cgpa(formating(gpa_list))
     while True: 
