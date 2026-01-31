@@ -41,10 +41,15 @@ def read_file(file_path)->list[dict[str,str]]: #improve using pandas , learn abo
     """Reads the content of a file and returns it."""
     if check_file_exist(file_path):
         with open(file_path, 'r') as file:
-            file.readline()
-            for line in file:
-                line = list(line.strip().split(','))
+            reader = csv.reader(file)
+            for line in reader:
+                if not line:
+                    continue
                 print(line)
+                # Detect header row and set HEADER from file
+                if line[0].strip().upper() == 'AY' and 'Module' in line:
+                    HEADER = [h.strip() for h in line]
+                    continue
                 if len(line) == len(HEADER) - 1 :
                     HEADER = ['AY','Module','AU','Grade','Points','SGPA','CGPA','Weight'] 
                 elif len(line) != len(HEADER):
@@ -136,13 +141,15 @@ def formating(gpa_list,first_run = True):
             except Exception as e: 
                 print(e,end=f'this is the error at start up for key {key}\n')
                 continue
-        gpa_dict["Description"] = mods_cache[gpa_dict["Module"]] if gpa_dict["Module"] in mods_cache else "NA"
-        if gpa_dict[key] == "NA":
+        description = mods_cache[gpa_dict["Module"]] if gpa_dict["Module"] in mods_cache else "NA"
+        gpa_dict["Description"] = description
+        if description == "NA":
             fetch_mod_code.main()
     return gpa_list 
 
-def calculate_cgpa(gpa_list,SGPA = False,startup_index=len(gpa_list)): #adding default values to prevent start up error
-    startup_index = len(gpa_list)
+def calculate_cgpa(gpa_list,SGPA = False,startup_index=None): #adding default values to prevent start up error
+    if startup_index is None:
+        startup_index = len(gpa_list) - 1
     au_counter =  0 
     total_points = 0.0
     for dict_index, gpa_dict in enumerate(gpa_list):
@@ -184,7 +191,7 @@ def ay()->str:
             \n7.Y4S1\
             \n8.Y4S2")
     user_input = int(input("Enter AY: "))
-    if user_input not in range(1,8):
+    if user_input not in range(1,9):
         print("Invalid")
         return
     else:
