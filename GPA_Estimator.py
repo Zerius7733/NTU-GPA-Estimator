@@ -3,7 +3,9 @@ import os, csv ,fetch_mod_code
 #file_path = (input("Enter the path to the file: ") + ".csv").strip().upper()
 file_path = 'Estimated GPA.csv' #one parent dir outside of git repo
 #file_path = 'Actual GPA.csv'
-root_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+#root_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+root_directory = os.path.dirname(os.path.abspath(__file__))
+#refactoring path to read from root instead of outside root ^ 
 file_path = os.path.join(root_directory, file_path)
 mods_cache = {}
 SAVE_CSV_TO_PARENT_DIR = True #implement later
