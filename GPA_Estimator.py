@@ -13,17 +13,41 @@ gpa_list = []
 print(root_directory,end="-> Directory Path\n")
 print(file_path,end= "->File Path\n")
 print(CACHE_FILE)
-def select_file(file_path='GPA.csv'):
-    #options to edit actual gpa file, estimating gpa file, new gpa file
-    print ("1.Actual GPA.csv\
-            \n2.Estimated GPA.csv\n", end = '' )
-    file_selection = int(input("Enter file selection:"))
-    match file_selection:
-        case 1: 
-            return "Actual GPA.csv"
-        case 2: 
-            return "Estimated GPA.csv"
-    return None
+def list_csv_files(directory: str) -> list[str]:
+    return sorted(
+        file_name for file_name in os.listdir(directory)
+        if file_name.lower().endswith(".csv") and os.path.isfile(os.path.join(directory, file_name))
+    )
+
+
+def select_file(directory: str) -> str:
+    csv_files = list_csv_files(directory)
+    while True:
+        print("Available CSV files:")
+        for index, csv_file in enumerate(csv_files, start=1):
+            print(f"{index}. {csv_file}")
+        print(f"{len(csv_files) + 1}. Create new CSV")
+
+        user_input = input("Enter file selection: ").strip()
+        if not user_input.isdigit():
+            print("Invalid input. Enter a number.")
+            continue
+
+        file_selection = int(user_input)
+        if 1 <= file_selection <= len(csv_files):
+            return csv_files[file_selection - 1]
+
+        if file_selection == len(csv_files) + 1:
+            new_file_name = input("Enter new CSV file name: ").strip()
+            if not new_file_name:
+                print("File name cannot be empty.")
+                continue
+            if not new_file_name.lower().endswith(".csv"):
+                new_file_name += ".csv"
+            return new_file_name
+
+        print("Selection out of range.")
+
 def check_file_exist(file_path:str)->bool:
     if not os.path.exists(file_path):
         with open(file_path, 'w') as file: 
@@ -290,11 +314,12 @@ def menu():
         exit()
 
 def main(): 
-    global gpa_list,mods_cache,description
+    global gpa_list,mods_cache,description,file_path
     description=True
     #mods_cache = fetch_mod_code.checking_cache_file(f'{root_directory}/NTU-GPA-Estimator')
     mods_cache = fetch_mod_code.checking_cache_file(root_directory)
-    file_path = os.path.join(root_directory, select_file())
+    selected_file = select_file(root_directory)
+    file_path = os.path.join(root_directory, selected_file)
     read_file(file_path)
     calculate_cgpa(formating(gpa_list))
     while True: 
@@ -326,3 +351,7 @@ grade_percentile = {
 
 if __name__ == "__main__":
     main()
+
+
+
+
