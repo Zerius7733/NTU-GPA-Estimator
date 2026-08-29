@@ -287,6 +287,94 @@ def printing_list(gpa_list):
         print()
     return 
 
+
+FGO_CORE_AU_LIMIT = 12
+FGO_INELIGIBLE_DESCRIPTION_TERMS = (
+    "FINAL YEAR PROJECT",
+    "PROFESSIONAL ATTACHMENT",
+    "PROFESSIONAL INTERNSHIP",
+)
+
+
+def is_fgo_core_candidate(module):
+    """Return whether a row can be considered by the core-course FGO simulator."""
+    grade = str(module.get('Grade', '')).strip().upper()
+    description = str(module.get('Description', '')).strip().upper()
+    if grade not in GRADE_SYSTEM:
+        return False
+    return not any(term in description for term in FGO_INELIGIBLE_DESCRIPTION_TERMS)
+
+
+def calculate_best_fgo(gpa_records, au_limit=FGO_CORE_AU_LIMIT):
+    """Find the eligible FGO combination (up to au_limit) with max CGPA."""
+    candidates = [row for row in gpa_records if is_fgo_core_candidate(row)]
+    total_au = sum(int(row['AU']) for row in gpa_records)
+    total_grade_points = sum(
+        int(row['AU']) * float(row['Points']) for row in gpa_records
+    )
+    original_cgpa = total_grade_points / total_au if total_au else 0.0
+
+    # removed AU -> (removed grade points, selected candidate indexes)
+    best_by_au = {0: (0.0, [])}
+    for index, row in enumerate(candidates):
+        course_au = int(row['AU'])
+        course_grade_points = course_au * float(row['Points'])
+        updated = dict(best_by_au)
+        for removed_au, (removed_points, selected) in best_by_au.items():
+            new_au = removed_au + course_au
+            if new_au > au_limit or new_au >= total_au:
+                continue
+            new_points = removed_points + course_grade_points
+            if new_au not in updated or new_points < updated[new_au][0]:
+                updated[new_au] = (new_points, selected + [index])
+        best_by_au = updated
+
+    best_result = {
+        'original_cgpa': original_cgpa,
+        'resulting_cgpa': original_cgpa,
+        'used_au': 0,
+        'courses': [],
+    }
+    for removed_au, (removed_points, selected) in best_by_au.items():
+        if removed_au == 0:
+            continue
+        resulting_cgpa = (
+            (total_grade_points - removed_points) / (total_au - removed_au)
+        )
+        if resulting_cgpa > best_result['resulting_cgpa']:
+            best_result = {
+                'original_cgpa': original_cgpa,
+                'resulting_cgpa': resulting_cgpa,
+                'used_au': removed_au,
+                'courses': [candidates[i] for i in selected],
+            }
+    return best_result
+
+
+def show_fgo_estimate(gpa_records):
+    result = calculate_best_fgo(gpa_records)
+    print("\nFGO Core Course Estimate")
+    print("-" * 32)
+    print(f"Current CGPA:          {result['original_cgpa']:.2f}")
+    print(f"Highest possible CGPA: {result['resulting_cgpa']:.2f}")
+    print(f"FGO quota used:        {result['used_au']}/{FGO_CORE_AU_LIMIT} AU")
+
+    if not result['courses']:
+        print("No eligible FGO selection would improve your CGPA.")
+    else:
+        print("Courses to declare FGO:")
+        for row in result['courses']:
+            print(
+                f"  {row['Module']} - {row['AU']} AU, {row['Grade']} "
+                f"({row.get('Description', 'NA')})"
+            )
+    print(
+        "Assumption: letter-graded rows are Core/ICC/MPE courses; Final Year "
+        "Projects and Professional Internships/Attachments are excluded."
+    )
+    print("This is an estimate only and does not modify your CSV.\n")
+
+
 def menu():
     global description,gpa_list
     input_choice = int(input("1. Update List \
@@ -295,7 +383,8 @@ def menu():
                         \n4. Save with Module Name\
                         \n5. Save without Module Name\
                         \n6. Reload\
-                        \n7. Exit\
+                        \n7. FGO (12 AU Core)\
+                        \n8. Exit\
                         \nEnter: "))
     if input_choice == 1: 
         updating_list(gpa_list)
@@ -310,8 +399,12 @@ def menu():
     elif input_choice == 6 : 
         read_file(file_path)
         calculate_cgpa(formating(gpa_list))
-    else: 
+    elif input_choice == 7:
+        show_fgo_estimate(gpa_list)
+    elif input_choice == 8:
         exit()
+    else:
+        print("Invalid menu option.")
 
 def main(): 
     global gpa_list,mods_cache,description,file_path
